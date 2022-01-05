@@ -11,6 +11,12 @@ public class Dot {
         this.status = Status.EMPTY;
     }
 
+    public Dot(int x, int y, Status status) {
+        this.x = x;
+        this.y = y;
+        this.status = status;
+    }
+
     public int getX() {
         return x;
     }
