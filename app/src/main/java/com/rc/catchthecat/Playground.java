@@ -6,14 +6,17 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import java.util.Random;
 
-public class Playground extends SurfaceView {
+public class Playground extends SurfaceView implements View.OnTouchListener {
     // 行数
     private final int ROW = 10;
     // 列数
@@ -36,6 +39,7 @@ public class Playground extends SurfaceView {
         // 传递回调类
         getHolder().addCallback(callback);
         random = new Random();
+        setOnTouchListener(this);
         initMap();
         initGame();
     }
@@ -139,4 +143,28 @@ public class Playground extends SurfaceView {
 
         }
     };
+
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        // 对玩家按下后抬起做识别
+        if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
+            Toast.makeText(getContext(), motionEvent.getX() + ":" + motionEvent.getY(), Toast.LENGTH_SHORT).show();
+            int x, y;
+            y = (int) (motionEvent.getY() / DOT_D);
+            // 设置奇偶行的偏移量
+            OFFSET = y % 2 == 0 ? 0 : DOT_D / 2;
+            x = (int) ((motionEvent.getX() - OFFSET) / DOT_D);
+            if (x >= COL || y >= ROW) {
+                initGame();
+            } else {
+                // 点击后设置为路障
+                Dot dot = getDot(x, y);
+                if (dot.getStatus() == Status.EMPTY){
+                    getDot(x, y).setStatus(Status.BARRIER);
+                }
+            }
+            redraw();
+        }
+        return true;
+    }
 }
