@@ -1,4 +1,4 @@
-package com.rc.catchthecat;
+package com.rc.catchthecat.elements;
 
 public class Dot {
     private int x;

@@ -14,8 +14,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.rc.catchthecat.elements.Dir;
+import com.rc.catchthecat.elements.Dot;
+import com.rc.catchthecat.elements.Status;
+
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -29,7 +33,7 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     // 偏移量
     private int OFFSET;
     // 默认添加的路障数量
-    private final int NUM_BARRIERS = 10;
+    private final int NUM_BARRIERS = 20;
     // 地图
     private Dot[][] map;
     // 猫
@@ -105,6 +109,9 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     private int getDistance(Dot dot, Dir dir) {
         // 到达边界的距离（正数），或到达路障的距离（负数）
         int dis = 0;
+        if (isAtEdge(dot)) {
+            return 1;
+        }
         // ori:初始点，next:下一个点
         Dot ori = dot, next;
         while (true) {
@@ -136,24 +143,56 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
         }
         Dir[] dirs = Dir.values();
         List<Dot> available = new ArrayList<>();
+        List<Dot> positive = new ArrayList<>();
+        HashMap<Dot, Dir> al = new HashMap<>();
         for (Dir dir : dirs) {
             Dot dot = getNeighbor(cat, dir);
             if (dot.getStatus() == Status.EMPTY) {
                 available.add(dot);
+                al.put(dot, dir);
+                if (getDistance(dot, dir) > 0) {
+                    positive.add(dot);
+                }
             }
         }
-        if (available.size() == 0) {
+        int len = available.size();
+        if (len == 0) {
             gameWin();
         } else {
-            catMoveTo(available.get(0));
+            // int index = random.nextInt(len);
+            // catMoveTo(available.get(index));
+            Dot best = null;
+            // 存在可以直接到达屏幕边缘的走向
+            if (positive.size() != 0) {
+                int min = Integer.MAX_VALUE;
+                for (int i = 0; i < positive.size(); i++) {
+                    Dot tmp = positive.get(i);
+                    int dis = getDistance(tmp, al.get(tmp));
+                    if (dis < min) {
+                        min = dis;
+                        best = tmp;
+                    }
+                }
+            } else { // 所有方向都存在路障
+                int max = 0;
+                for (int i = 0; i < available.size(); i++) {
+                    Dot tmp = available.get(i);
+                    int k = getDistance(tmp, al.get(tmp));
+                    if (k < max) {
+                        max = k;
+                        best = tmp;
+                    }
+                }
+            }
+            catMoveTo(best);
         }
     }
 
-    private void gameWin(){
+    private void gameWin() {
         Toast.makeText(getContext(), "Win", Toast.LENGTH_SHORT).show();
     }
 
-    private void gameLose(){
+    private void gameLose() {
         Toast.makeText(getContext(), "Lose", Toast.LENGTH_SHORT).show();
     }
 
