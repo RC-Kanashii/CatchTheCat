@@ -14,6 +14,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 
 public class Playground extends SurfaceView implements View.OnTouchListener {
@@ -47,6 +50,111 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     private Dot getDot(int i, int j) {
         // 注意：游戏中行列坐标和此处的i, j是反着的
         return map[j][i];
+    }
+
+    private boolean isAtEdge(Dot dot) {
+        if (dot.getX() * dot.getY() == 0 ||
+                dot.getX() + 1 == COL ||
+                dot.getY() + 1 == ROW) {
+            return true;
+        }
+        return false;
+    }
+
+    private Dot getNeighbor(Dot dot, Dir dir) {
+        Dot res = null;
+        switch (dir) {
+            case L:
+                res = getDot(dot.getX() - 1, dot.getY());
+                break;
+            case LU:
+                if (dot.getY() % 2 == 0) {
+                    res = getDot(dot.getX() - 1, dot.getY() - 1);
+                } else {
+                    res = getDot(dot.getX(), dot.getY() - 1);
+                }
+                break;
+            case RU:
+                if (dot.getY() % 2 == 0) {
+                    res = getDot(dot.getX(), dot.getY() - 1);
+                } else {
+                    res = getDot(dot.getX() + 1, dot.getY() - 1);
+                }
+                break;
+            case R:
+                res = getDot(dot.getX() + 1, dot.getY());
+                break;
+            case RD:
+                if (dot.getY() % 2 == 0) {
+                    res = getDot(dot.getX(), dot.getY() + 1);
+                } else {
+                    res = getDot(dot.getX() + 1, dot.getY() + 1);
+                }
+                break;
+            case LD:
+                if (dot.getY() % 2 == 0) {
+                    res = getDot(dot.getX() - 1, dot.getY() + 1);
+                } else {
+                    res = getDot(dot.getX(), dot.getY() + 1);
+                }
+                break;
+        }
+        return res;
+    }
+
+    private int getDistance(Dot dot, Dir dir) {
+        // 到达边界的距离（正数），或到达路障的距离（负数）
+        int dis = 0;
+        // ori:初始点，next:下一个点
+        Dot ori = dot, next;
+        while (true) {
+            next = getNeighbor(ori, dir);
+            if (next.getStatus() == Status.BARRIER) {
+                dis *= -1;
+                break;
+            } else if (isAtEdge(next)) {
+                // 边界本身也是可到达的
+                dis++;
+                break;
+            }
+            dis++;
+            ori = next;
+        }
+        return dis;
+    }
+
+    private void catMoveTo(Dot dot) {
+        dot.setStatus(Status.CAT);
+        getDot(cat.getX(), cat.getY()).setStatus(Status.EMPTY);
+        cat.setXY(dot.getX(), dot.getY());
+    }
+
+    private void move() {
+        if (isAtEdge(cat)) {
+            gameLose();
+            return;
+        }
+        Dir[] dirs = Dir.values();
+        List<Dot> available = new ArrayList<>();
+        for (Dir dir : dirs) {
+            Dot dot = getNeighbor(cat, dir);
+            if (dot.getStatus() == Status.EMPTY) {
+                available.add(dot);
+            }
+        }
+        if (available.size() == 0) {
+            gameWin();
+        } else {
+            catMoveTo(available.get(0));
+        }
+    }
+
+    private void gameWin(){
+        Toast.makeText(getContext(), "Win", Toast.LENGTH_SHORT).show();
+    }
+
+    private void gameLose(){
+        Toast.makeText(getContext(), "Lose", Toast.LENGTH_SHORT).show();
     }
 
     private void initMap() {
@@ -148,7 +256,7 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     public boolean onTouch(View view, MotionEvent motionEvent) {
         // 对玩家按下后抬起做识别
         if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-            Toast.makeText(getContext(), motionEvent.getX() + ":" + motionEvent.getY(), Toast.LENGTH_SHORT).show();
+            // Toast.makeText(getContext(), motionEvent.getX() + ":" + motionEvent.getY(), Toast.LENGTH_SHORT).show();
             int x, y;
             y = (int) (motionEvent.getY() / DOT_D);
             // 设置奇偶行的偏移量
@@ -159,8 +267,9 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
             } else {
                 // 点击后设置为路障
                 Dot dot = getDot(x, y);
-                if (dot.getStatus() == Status.EMPTY){
+                if (dot.getStatus() == Status.EMPTY) {
                     getDot(x, y).setStatus(Status.BARRIER);
+                    move();
                 }
             }
             redraw();
