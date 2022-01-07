@@ -5,198 +5,100 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.rc.catchthecat.elements.Dir;
 import com.rc.catchthecat.elements.Dot;
 import com.rc.catchthecat.elements.Status;
+import com.rc.catchthecat.services.GameLogic;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Playground extends SurfaceView implements View.OnTouchListener {
     // 行数
-    private final int ROW = 10;
+    public static final int ROW = 10;
     // 列数
-    private final int COL = 10;
+    public static final int COL = 10;
     // Dot直径
-    private int DOT_D = 80;
+    public static int DOT_D = 80;
     // 偏移量
     private int OFFSET;
+    // 地图与屏幕顶端的距离
+    private int MARGIN_TOP;
+    // 地图与屏幕左右两端的距离
+    private int MARGIN_LR;
     // 默认添加的路障数量
     private final int NUM_BARRIERS = 20;
     // 地图
-    private Dot[][] map;
+    public static Dot[][] map;
     // 猫
-    private Dot cat;
+    public static Dot cat;
     // 随机数
     private Random random;
+    // GameLogic对象
+    GameLogic gameLogic;
+
+    // 屏幕宽度
+    private int SCREEN_WIDTH;
+    // 做成神经猫动态图效果的单张图片
+    private Drawable cat_drawable;
+    // 背景图
+    private Drawable background;
+    // 神经猫动态图的索引
+    private int index = 0;
+    private Timer timer;
+
+    private TimerTask timerttask;
+
+    private Context context;
+    //行走的步数
+    private int steps;
+
+    private boolean canMove = true;
+
+    private int[] images = {R.drawable.cat1, R.drawable.cat2, R.drawable.cat3,
+            R.drawable.cat4, R.drawable.cat5, R.drawable.cat6, R.drawable.cat7,
+            R.drawable.cat8, R.drawable.cat9, R.drawable.cat10,
+            R.drawable.cat11, R.drawable.cat12, R.drawable.cat13,
+            R.drawable.cat14, R.drawable.cat15, R.drawable.cat16};
 
     public Playground(Context context) {
         super(context);
         // 传递回调类
         getHolder().addCallback(callback);
         random = new Random();
+        gameLogic = new GameLogic(getContext());
         setOnTouchListener(this);
+
+        if (Build.VERSION.SDK_INT < 21) {
+            cat_drawable = getResources().getDrawable(images[index]);
+            background = getResources().getDrawable(R.drawable.bg);
+        } else {
+            cat_drawable = getResources().getDrawable(images[index], null);
+            background = getResources().getDrawable(R.drawable.bg, null);
+        }
+
         initMap();
         initGame();
     }
 
-    private Dot getDot(int i, int j) {
+    public static Dot getDot(int i, int j) {
         // 注意：游戏中行列坐标和此处的i, j是反着的
         return map[j][i];
     }
 
-    private boolean isAtEdge(Dot dot) {
-        if (dot.getX() * dot.getY() == 0 ||
-                dot.getX() + 1 == COL ||
-                dot.getY() + 1 == ROW) {
-            return true;
-        }
-        return false;
-    }
-
-    private Dot getNeighbor(Dot dot, Dir dir) {
-        Dot res = null;
-        switch (dir) {
-            case L:
-                res = getDot(dot.getX() - 1, dot.getY());
-                break;
-            case LU:
-                if (dot.getY() % 2 == 0) {
-                    res = getDot(dot.getX() - 1, dot.getY() - 1);
-                } else {
-                    res = getDot(dot.getX(), dot.getY() - 1);
-                }
-                break;
-            case RU:
-                if (dot.getY() % 2 == 0) {
-                    res = getDot(dot.getX(), dot.getY() - 1);
-                } else {
-                    res = getDot(dot.getX() + 1, dot.getY() - 1);
-                }
-                break;
-            case R:
-                res = getDot(dot.getX() + 1, dot.getY());
-                break;
-            case RD:
-                if (dot.getY() % 2 == 0) {
-                    res = getDot(dot.getX(), dot.getY() + 1);
-                } else {
-                    res = getDot(dot.getX() + 1, dot.getY() + 1);
-                }
-                break;
-            case LD:
-                if (dot.getY() % 2 == 0) {
-                    res = getDot(dot.getX() - 1, dot.getY() + 1);
-                } else {
-                    res = getDot(dot.getX(), dot.getY() + 1);
-                }
-                break;
-        }
-        return res;
-    }
-
-    private int getDistance(Dot dot, Dir dir) {
-        // 到达边界的距离（正数），或到达路障的距离（负数）
-        int dis = 0;
-        if (isAtEdge(dot)) {
-            return 1;
-        }
-        // ori:初始点，next:下一个点
-        Dot ori = dot, next;
-        while (true) {
-            next = getNeighbor(ori, dir);
-            if (next.getStatus() == Status.BARRIER) {
-                dis *= -1;
-                break;
-            } else if (isAtEdge(next)) {
-                // 边界本身也是可到达的
-                dis++;
-                break;
-            }
-            dis++;
-            ori = next;
-        }
-        return dis;
-    }
-
-    private void catMoveTo(Dot dot) {
-        dot.setStatus(Status.CAT);
-        getDot(cat.getX(), cat.getY()).setStatus(Status.EMPTY);
-        cat.setXY(dot.getX(), dot.getY());
-    }
-
-    private void move() {
-        if (isAtEdge(cat)) {
-            gameLose();
-            return;
-        }
-        Dir[] dirs = Dir.values();
-        List<Dot> available = new ArrayList<>();
-        List<Dot> positive = new ArrayList<>();
-        HashMap<Dot, Dir> al = new HashMap<>();
-        for (Dir dir : dirs) {
-            Dot dot = getNeighbor(cat, dir);
-            if (dot.getStatus() == Status.EMPTY) {
-                available.add(dot);
-                al.put(dot, dir);
-                if (getDistance(dot, dir) > 0) {
-                    positive.add(dot);
-                }
-            }
-        }
-        int len = available.size();
-        if (len == 0) {
-            gameWin();
-        } else {
-            // int index = random.nextInt(len);
-            // catMoveTo(available.get(index));
-            Dot best = null;
-            // 存在可以直接到达屏幕边缘的走向
-            if (positive.size() != 0) {
-                int min = Integer.MAX_VALUE;
-                for (int i = 0; i < positive.size(); i++) {
-                    Dot tmp = positive.get(i);
-                    int dis = getDistance(tmp, al.get(tmp));
-                    if (dis < min) {
-                        min = dis;
-                        best = tmp;
-                    }
-                }
-            } else { // 所有方向都存在路障
-                int max = 0;
-                for (int i = 0; i < available.size(); i++) {
-                    Dot tmp = available.get(i);
-                    int k = getDistance(tmp, al.get(tmp));
-                    if (k < max) {
-                        max = k;
-                        best = tmp;
-                    }
-                }
-            }
-            catMoveTo(best);
-        }
-    }
-
-    private void gameWin() {
-        Toast.makeText(getContext(), "Win", Toast.LENGTH_SHORT).show();
-    }
-
-    private void gameLose() {
-        Toast.makeText(getContext(), "Lose", Toast.LENGTH_SHORT).show();
-    }
-
     private void initMap() {
+        steps = 0;
+
         map = new Dot[ROW][COL];
         for (int i = 0; i < ROW; i++) {
             for (int j = 0; j < COL; j++) {
@@ -204,6 +106,8 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                 map[i][j] = new Dot(j, i);
             }
         }
+
+
     }
 
     private void initGame() {
@@ -214,8 +118,8 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
             }
         }
         // cat状态为CAT，并设置起始点
-        cat = new Dot(4, 5, Status.CAT);
-        getDot(4, 5).setStatus(Status.CAT);
+        cat = new Dot(5, 5, Status.CAT);
+        getDot(5, 5).setStatus(Status.CAT);
         // 初始化路障
         for (int i = 0; i < NUM_BARRIERS; ) {
             int x = random.nextInt(10);
@@ -258,13 +162,29 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                         break;
                 }
                 canvas.drawOval(
-                        new RectF(dot.getX() * DOT_D + OFFSET,
-                                dot.getY() * DOT_D,
-                                (dot.getX() + 1) * DOT_D + OFFSET,
-                                (dot.getY() + 1) * DOT_D),
+                        new RectF(dot.getX() * DOT_D + OFFSET + MARGIN_LR,
+                                dot.getY() * DOT_D + MARGIN_TOP,
+                                (dot.getX() + 1) * DOT_D + OFFSET + MARGIN_LR,
+                                (dot.getY() + 1) * DOT_D + MARGIN_TOP),
                         paint);
             }
         }
+
+        int left;
+        int top;
+        if (cat.getY() % 2 == 0) {
+            left = cat.getX() * DOT_D;
+            top = cat.getY() * DOT_D;
+        } else {
+            left = (DOT_D / 2) + cat.getX() * DOT_D;
+            top = cat.getY() * DOT_D;
+        }
+        // 此处神经猫图片的位置是根据效果图来调整的
+        cat_drawable.setBounds(left - DOT_D / 6 + MARGIN_LR, top - DOT_D / 2
+                + MARGIN_TOP, left + DOT_D + MARGIN_LR, top + DOT_D + MARGIN_TOP);
+        cat_drawable.draw(canvas);
+        background.setBounds(0, 0, SCREEN_WIDTH, MARGIN_TOP);
+        background.draw(canvas);
 
         // 将画布内容进行提交
         getHolder().unlockCanvasAndPost(canvas);
@@ -275,21 +195,58 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
         public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
             // 第一次显示时，把内容显示在屏幕上
             redraw();
+            startTimer();
         }
 
         @Override
         public void surfaceChanged(@NonNull SurfaceHolder surfaceHolder, int format, int width, int height) {
+            SCREEN_WIDTH = width;
+            MARGIN_TOP = height - DOT_D * (ROW + 2);
+            MARGIN_LR = DOT_D / 3;
+
             // 动态设置Dot直径
             DOT_D = width / (COL + 1);
+
             // 重新绘制界面
             redraw();
         }
 
         @Override
         public void surfaceDestroyed(@NonNull SurfaceHolder surfaceHolder) {
-
+            stopTimer();
         }
     };
+
+    // 开启定时任务
+    private void startTimer() {
+        timer = new Timer();
+        timerttask = new TimerTask() {
+            public void run() {
+                gifImage();
+            }
+        };
+        timer.schedule(timerttask, 50, 65);
+    }
+
+    // 停止定时任务
+    public void stopTimer() {
+        timer.cancel();
+        timer.purge();
+    }
+
+    // 动态图
+    private void gifImage() {
+        index++;
+        if (index > images.length - 1) {
+            index = 0;
+        }
+        if (Build.VERSION.SDK_INT < 21) {
+            cat_drawable = getResources().getDrawable(images[index]);
+        } else {
+            cat_drawable = getResources().getDrawable(images[index], null);
+        }
+        redraw();
+    }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -297,18 +254,18 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
         if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
             // Toast.makeText(getContext(), motionEvent.getX() + ":" + motionEvent.getY(), Toast.LENGTH_SHORT).show();
             int x, y;
-            y = (int) (motionEvent.getY() / DOT_D);
+            y = (int) ((motionEvent.getY() - MARGIN_TOP) / DOT_D);
             // 设置奇偶行的偏移量
             OFFSET = y % 2 == 0 ? 0 : DOT_D / 2;
-            x = (int) ((motionEvent.getX() - OFFSET) / DOT_D);
-            if (x >= COL || y >= ROW) {
+            x = (int) ((motionEvent.getX() - OFFSET - MARGIN_LR) / DOT_D);
+            if (x >= COL || y >= ROW || y < 0) {
                 initGame();
             } else {
                 // 点击后设置为路障
                 Dot dot = getDot(x, y);
                 if (dot.getStatus() == Status.EMPTY) {
                     getDot(x, y).setStatus(Status.BARRIER);
-                    move();
+                    gameLogic.move();
                 }
             }
             redraw();
