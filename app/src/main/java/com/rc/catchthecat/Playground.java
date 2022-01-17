@@ -200,12 +200,11 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
 
         @Override
         public void surfaceChanged(@NonNull SurfaceHolder surfaceHolder, int format, int width, int height) {
+            // 动态设置Dot直径
+            DOT_D = width / (COL + 1);
             SCREEN_WIDTH = width;
             MARGIN_TOP = height - DOT_D * (ROW + 2);
             MARGIN_LR = DOT_D / 3;
-
-            // 动态设置Dot直径
-            DOT_D = width / (COL + 1);
 
             // 重新绘制界面
             redraw();
