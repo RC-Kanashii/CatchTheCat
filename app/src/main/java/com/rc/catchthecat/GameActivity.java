@@ -33,7 +33,6 @@ public class GameActivity extends AppCompatActivity {
         setting_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(GameActivity.this, "设置", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(GameActivity.this, SettingActivity.class);
                 startActivity(intent);
             }
