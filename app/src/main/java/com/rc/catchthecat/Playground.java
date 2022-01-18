@@ -264,7 +264,8 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                 Dot dot = getDot(x, y);
                 if (dot.getStatus() == Status.EMPTY) {
                     getDot(x, y).setStatus(Status.BARRIER);
-                    gameLogic.move();
+                    // gameLogic.moveEasy();
+                    gameLogic.moveNormal();
                 }
             }
             redraw();
