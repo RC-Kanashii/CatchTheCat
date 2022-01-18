@@ -1,12 +1,14 @@
 package com.rc.catchthecat;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -37,7 +39,7 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     // 地图与屏幕左右两端的距离
     private int MARGIN_LR;
     // 默认添加的路障数量
-    private final int NUM_BARRIERS = 20;
+    private final int NUM_BARRIERS = 12;
     // 地图
     public static Dot[][] map;
     // 猫
@@ -46,9 +48,13 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     private Random random;
     // GameLogic对象
     GameLogic gameLogic;
+    // 游戏难度
+    String difficulty;
 
     // 屏幕宽度
     private int SCREEN_WIDTH;
+    // 屏幕高度
+    private int SCREEN_HEIGHT;
     // 做成神经猫动态图效果的单张图片
     private Drawable cat_drawable;
     // 背景图
@@ -73,6 +79,29 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
 
     public Playground(Context context) {
         super(context);
+        this.context = context;
+        initSurfaceView();
+    }
+
+    public Playground(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        this.context = context;
+        initSurfaceView();
+    }
+
+    public Playground(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        this.context = context;
+        initSurfaceView();
+    }
+
+    public Playground(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+        super(context, attrs, defStyleAttr, defStyleRes);
+        this.context = context;
+        initSurfaceView();
+    }
+
+    private void initSurfaceView() {
         // 传递回调类
         getHolder().addCallback(callback);
         random = new Random();
@@ -89,6 +118,12 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
 
         initMap();
         initGame();
+        initDifficulty();
+    }
+
+    private void initDifficulty() {
+        SharedPreferences sp = context.getSharedPreferences("difficulty", Context.MODE_PRIVATE);
+        difficulty = sp.getString("difficulty", "easy");  // 默认easy
     }
 
     public static Dot getDot(int i, int j) {
@@ -106,8 +141,6 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                 map[i][j] = new Dot(j, i);
             }
         }
-
-
     }
 
     private void initGame() {
@@ -170,6 +203,16 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
             }
         }
 
+        String diff_zh = "";
+        switch (difficulty) {
+            case "easy": diff_zh = "简单"; break;
+            case "normal": diff_zh = "普通"; break;
+            case "hard": diff_zh = "困难"; break;
+        }
+        paint.setColor(Color.BLACK);
+        paint.setTextSize(68);
+        canvas.drawText("难度：" + diff_zh, 20, SCREEN_HEIGHT - 20, paint);
+
         int left;
         int top;
         if (cat.getY() % 2 == 0) {
@@ -203,6 +246,7 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
             // 动态设置Dot直径
             DOT_D = width / (COL + 1);
             SCREEN_WIDTH = width;
+            SCREEN_HEIGHT = height;
             MARGIN_TOP = height - DOT_D * (ROW + 2);
             MARGIN_LR = DOT_D / 3;
 
@@ -264,8 +308,11 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                 Dot dot = getDot(x, y);
                 if (dot.getStatus() == Status.EMPTY) {
                     getDot(x, y).setStatus(Status.BARRIER);
-                    // gameLogic.moveEasy();
-                    gameLogic.moveNormal();
+                    switch (difficulty) {
+                        case "easy": gameLogic.moveEasy(); break;
+                        case "normal": gameLogic.moveNormal(); break;
+                        case "hard": gameLogic.moveNormal(); break;
+                    }
                 }
             }
             redraw();
