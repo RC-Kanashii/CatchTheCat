@@ -16,13 +16,13 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import com.rc.catchthecat.elements.Dir;
 import com.rc.catchthecat.elements.Dot;
 import com.rc.catchthecat.elements.Status;
+import com.rc.catchthecat.service.RankService;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -347,8 +347,8 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
                             moveNormal();
                             break;
                     }
-                    steps++;
                 }
+                steps++;
             }
             redraw();
         }
@@ -448,6 +448,21 @@ public class Playground extends SurfaceView implements View.OnTouchListener {
     /* 游戏输赢 */
 
     private void gameWin() {
+        RankService rs = new RankService(context, "rank", null, 1);
+        String diff = "";
+        switch (difficulty) {
+            case "easy":
+                diff = "简单";
+                break;
+            case "normal":
+                diff = "普通";
+                break;
+            case "hard":
+                diff = "困难";
+                break;
+        }
+        rs.add(rs.getReadableDatabase(), steps + 1, diff);
+
         AlertDialog.Builder dialog = new AlertDialog.Builder(context);
         dialog.setTitle("挑战成功");
         dialog.setMessage("你用" + (steps + 1) + "步捕捉到了小猫");

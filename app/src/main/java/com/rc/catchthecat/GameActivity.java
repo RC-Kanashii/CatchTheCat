@@ -41,7 +41,8 @@ public class GameActivity extends AppCompatActivity {
         rank_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                Intent intent = new Intent(GameActivity.this, RankActivity.class);
+                startActivity(intent);
             }
         });
     }

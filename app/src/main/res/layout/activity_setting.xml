@@ -25,11 +25,6 @@
             android:layout_height="wrap_content"
             android:id="@+id/normal"
             android:text="普通"/>
-        <RadioButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/hard"
-            android:text="困难"/>
     </RadioGroup>
 
     <TextView
@@ -43,11 +38,6 @@
         android:layout_height="wrap_content"
         android:textSize="18sp"
         android:text="普通：小猫会寻找最短路径逃跑"/>
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:text="简单：小猫会寻找最短路径，并试图躲过你布置的陷阱"/>
 
     <Button
         android:layout_marginTop="60dp"

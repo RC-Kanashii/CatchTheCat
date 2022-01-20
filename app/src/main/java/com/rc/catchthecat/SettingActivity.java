@@ -13,7 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 public class SettingActivity extends AppCompatActivity {
     private Button back_btn;
     private RadioGroup radioGroup;
-    private RadioButton easy, normal, hard;
+    private RadioButton easy, normal;
     private String difficulty;
 
     @Override
@@ -29,15 +29,17 @@ public class SettingActivity extends AppCompatActivity {
         radioGroup = findViewById(R.id.radio_group);
         easy = findViewById(R.id.easy);
         normal = findViewById(R.id.normal);
-        hard = findViewById(R.id.hard);
 
         SharedPreferences sp = getSharedPreferences("difficulty", MODE_PRIVATE);
         difficulty = sp.getString("difficulty", "easy");
 
         switch (difficulty) {
-            case "easy": easy.toggle(); break;
-            case "normal": normal.toggle(); break;
-            case "hard": hard.toggle(); break;
+            case "easy":
+                easy.toggle();
+                break;
+            case "normal":
+                normal.toggle();
+                break;
         }
 
         radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
@@ -47,8 +49,6 @@ public class SettingActivity extends AppCompatActivity {
                     difficulty = "easy";
                 } else if (i == normal.getId()) {
                     difficulty = "normal";
-                } else if (i == hard.getId()) {
-                    difficulty = "hard";
                 }
 
                 SharedPreferences sp = getSharedPreferences("difficulty", MODE_PRIVATE);
